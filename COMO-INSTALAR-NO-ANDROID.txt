@@ -1,0 +1,25 @@
+GenCalcLGBio no Android (e tambem como app no Mac/Windows pelo navegador)
+=========================================================================
+
+Esta pasta e um app web instalavel. Ele precisa ser colocado uma vez num
+endereco https. O jeito gratuito mais simples e o GitHub Pages:
+
+1. No computador, crie uma conta em https://github.com (se ainda nao tiver).
+2. Crie um repositorio novo: botao "New" > nome: gencalclgbio > Public > Create.
+3. Na pagina do repositorio: "uploading an existing file" (ou Add file > Upload files)
+   e arraste TODOS os arquivos desta pasta android-web (index.html, sw.js,
+   manifest.webmanifest e os icones .png). Clique em "Commit changes".
+4. Settings > Pages > em "Branch" escolha "main" e "/ (root)" > Save.
+   Em 1 a 2 minutos o app fica em:  https://SEU-USUARIO.github.io/gencalclgbio/
+
+No celular Android:
+5. Abra esse endereco no Chrome.
+6. Menu (tres pontinhos) > "Instalar app" ou "Adicionar a tela inicial".
+   O GenCalcLGBio aparece como um app, com icone proprio, e abre em tela cheia.
+   Depois da primeira abertura funciona sem internet (exceto a busca no GoaT).
+
+O mesmo endereco tambem pode ser instalado no Mac e no Windows pelo Chrome/Edge
+(icone de instalar na barra de endereco) e compartilhado com o laboratorio.
+
+Para atualizar o app no futuro, basta enviar o novo index.html para o mesmo
+repositorio; os aparelhos pegam a versao nova na proxima abertura com internet.

@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GenCalcLGBio</title>
+<meta name="theme-color" content="#0b6e7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GenCalcLGBio">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: barra superior fixa + indicador de etapas; uma janela (tela) por vez, com Voltar/Continuar no rodapé de cada tela. */
+:root{
+  --bg:#f3f6f7; --surface:#ffffff; --ink:#14262f; --muted:#5b6d75; --line:#d9e2e5;
+  --accent:#0b6e7a; --accent-soft:#e1f1f2; --accent-ink:#ffffff;
+  --good:#1d7a46; --good-soft:#e2f3e8; --warn:#9a5b00; --warn-soft:#fbefd9; --bad:#b3261e; --bad-soft:#fbe4e2;
+  --m-wgs:#0b6e7a; --m-rna:#7a4bb3; --m-meta:#2f7d32;
+  --font-body:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  --font-num:"IBM Plex Mono","Cascadia Mono",Consolas,ui-monospace,monospace;
+  --radius:10px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1619; --surface:#152126; --ink:#e3ecee; --muted:#93a6ad; --line:#26363c;
+    --accent:#3bb3bf; --accent-soft:#16343a; --accent-ink:#06191c;
+    --good:#5cc98a; --good-soft:#163024; --warn:#e6b25c; --warn-soft:#352a14; --bad:#f08a80; --bad-soft:#3a1b18;
+    --m-wgs:#3bb3bf; --m-rna:#b48ae6; --m-meta:#77c47a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1619; --surface:#152126; --ink:#e3ecee; --muted:#93a6ad; --line:#26363c;
+  --accent:#3bb3bf; --accent-soft:#16343a; --accent-ink:#06191c;
+  --good:#5cc98a; --good-soft:#163024; --warn:#e6b25c; --warn-soft:#352a14; --bad:#f08a80; --bad-soft:#3a1b18;
+  --m-wgs:#3bb3bf; --m-rna:#b48ae6; --m-meta:#77c47a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45}
+h1,h2,h3{margin:0;text-wrap:balance}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.top-inner{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;margin-right:auto;cursor:pointer;background:none;border:0;padding:0;color:inherit;text-align:left;font:inherit}
+.brand h1{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.brand h1 span{color:var(--accent)}
+.brand p{margin:0;color:var(--muted);font-size:12px}
+.navbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 13px var(--font-body);padding:8px 12px;border-radius:8px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.navbtn:hover{border-color:var(--accent);color:var(--accent)}
+.navbtn .count{background:var(--accent);color:var(--accent-ink);border-radius:999px;font-size:11px;padding:0 6px;min-width:18px;text-align:center}
+
+.steps{max-width:1180px;margin:0 auto;padding:14px 20px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.steps .st{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);font-weight:500}
+.steps .st b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);font:600 11.5px var(--font-num);background:var(--surface)}
+.steps .st.done b{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.steps .st.cur{color:var(--ink);font-weight:600}
+.steps .st.cur b{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.steps .sep{width:22px;height:1.5px;background:var(--line)}
+
+main{max-width:1180px;margin:0 auto;padding:14px 20px 40px}
+.screen{display:none}
+.screen.active{display:block}
+.screen-head{margin:6px 0 16px}
+.screen-head h2{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.screen-head p{margin:4px 0 0;color:var(--muted);max-width:70ch}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;margin-bottom:6px}
+.tag.wgs{background:color-mix(in srgb,var(--m-wgs) 14%,transparent);color:var(--m-wgs)}
+.tag.rna{background:color-mix(in srgb,var(--m-rna) 14%,transparent);color:var(--m-rna)}
+.tag.meta{background:color-mix(in srgb,var(--m-meta) 14%,transparent);color:var(--m-meta)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:12px}
+.card h3 small{font-weight:400;color:var(--muted);font-size:12.5px;margin-left:6px}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+/* Cartões de escolha grandes */
+.choice{display:flex;flex-direction:column;gap:8px;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:20px;cursor:pointer;font:inherit;color:inherit;transition:border-color .15s, box-shadow .15s}
+.choice:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(11,110,122,.08)}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.choice .ic{width:44px;height:44px;border-radius:10px;display:grid;place-items:center}
+.choice h4{margin:4px 0 0;font-size:17px}
+.choice p{margin:0;color:var(--muted);font-size:13px}
+.choice ul{margin:4px 0 0;padding-left:18px;color:var(--muted);font-size:12.5px}
+.choice.small{padding:14px;gap:4px}
+.choice.small h4{font-size:14.5px;margin:0}
+
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:500;color:var(--muted)}
+input[type="text"],input[type="number"],select{font:500 14px var(--font-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-height:40px}
+input[type="number"]{font-family:var(--font-num)}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 92px;gap:8px}
+.inrow{display:flex;gap:8px}
+.inrow > *:first-child{flex:1}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{flex:1;text-align:center;padding:9px 10px;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);background:var(--surface);border-right:1px solid var(--line)}
+.seg label:last-of-type{border-right:0}
+.seg input:checked + label{background:var(--accent-soft);color:var(--accent)}
+.seg input:focus-visible + label{outline:2px solid var(--accent);outline-offset:-2px}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 13px var(--font-num);padding:6px 11px;border-radius:999px;cursor:pointer;min-width:46px}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer}
+.check input{width:16px;height:16px;accent-color:var(--accent);flex:none}
+.hint{font-size:12px;color:var(--muted)}
+.lbl{font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:6px}
+
+details.adv{border:1px dashed var(--line);border-radius:8px;padding:10px 12px}
+details.adv summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--muted)}
+details.adv[open] summary{margin-bottom:10px}
+
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:600 13.5px var(--font-body);padding:10px 16px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.sm{padding:6px 10px;font-size:12.5px}
+.btn:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.footer-nav{display:flex;justify-content:space-between;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:980px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;background:var(--surface)}
+.tile .k{font-size:12px;color:var(--muted);font-weight:500}
+.tile .v{font:600 22px var(--font-num);margin-top:4px;letter-spacing:-.02em;overflow-wrap:anywhere}
+.tile .v small{font-size:13px;font-weight:500;color:var(--muted);margin-left:3px}
+.tile .s{font-size:12px;color:var(--muted);margin-top:3px}
+.tile.hero{background:var(--accent-soft);border-color:transparent}
+.tile.hero .v{font-size:32px;color:var(--accent)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.info{background:var(--accent-soft);color:var(--accent)}
+.pill.mute{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+
+.alerts{display:flex;flex-direction:column;gap:6px}
+.alerts:not(:empty){margin-top:12px}
+.alert{font-size:12.5px;padding:8px 12px;border-radius:8px;border-left:3px solid}
+.alert.warn{background:var(--warn-soft);border-color:var(--warn)}
+.alert.info{background:var(--accent-soft);border-color:var(--accent)}
+.alert.bad{background:var(--bad-soft);border-color:var(--bad)}
+
+.cost{display:grid;grid-template-columns:1fr auto;gap:6px 16px;font-size:13.5px}
+.cost .l{color:var(--muted)}
+.cost .r{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.cost .tot{font-weight:700;color:var(--ink);border-top:1px solid var(--line);padding-top:8px}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;background:var(--bg)}
+td.n,th.n{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:0}
+tr.best td{background:var(--good-soft)}
+tr.dim td{color:var(--muted)}
+td input[type="number"],td input[type="text"]{min-height:32px;padding:5px 8px}
+td input[type="number"]{width:120px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:20px 0 10px}
+.section-head h3{font-size:15px;font-weight:600}
+.rec{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rec .big{font-weight:600;font-size:15px}
+.empty{padding:18px;color:var(--muted);text-align:center;white-space:normal}
+
+.goat-box{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--bg)}
+.goat-res{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.goat-res .gs{font:600 26px var(--font-num);color:var(--accent)}
+.sugs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sugs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font:italic 500 12.5px var(--font-body);color:var(--ink);cursor:pointer}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.prov{display:inline-block;font-size:10.5px;font-weight:700;color:var(--warn);background:var(--warn-soft);padding:1px 6px;border-radius:4px;margin-left:6px;letter-spacing:.03em}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 24px;color:var(--muted);font-size:12px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+@media print{header.top,.steps,.footer-nav,.btns,footer{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <button class="brand" id="go-home" aria-label="Voltar ao início">
+      <svg width="36" height="36" viewBox="0 0 38 38" aria-hidden="true">
+        <rect width="38" height="38" rx="9" fill="var(--accent)"/>
+        <path d="M12 7c0 8 14 8 14 12s-14 4-14 12M26 7c0 8-14 8-14 12s14 4 14 12" stroke="var(--accent-ink)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M14.5 11.5h9M14.5 26.5h9M17 19h4" stroke="var(--accent-ink)" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
+      </svg>
+      <div><h1>GenCalc<span>LGBio</span></h1><p>Planejamento de sequenciamento · rendimento, cobertura e custo</p></div>
+    </button>
+    <button class="navbtn" id="nav-cen">Cenários salvos <span class="count num" id="cen-count">0</span></button>
+    <button class="navbtn" id="nav-precos">Preços e kits</button>
+  </div>
+</header>
+<nav class="steps" id="steps" aria-label="Etapas"></nav>
+
+<main>
+<!-- ===================== 1. METODOLOGIA ===================== -->
+<section class="screen active" id="s-home">
+  <div class="screen-head">
+    <h2>Que tipo de sequenciamento você quer planejar?</h2>
+    <p>Escolha a metodologia. As próximas janelas pedem só o que é necessário para ela.</p>
+  </div>
+  <div class="grid3">
+    <button class="choice" data-metodo="wgs">
+      <span class="ic" style="background:color-mix(in srgb,var(--m-wgs) 14%,transparent)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--m-wgs)" stroke-width="2" stroke-linecap="round"><path d="M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9s10 3 10 9"/></svg></span>
+      <h4>Genoma total</h4>
+      <p>Sequenciamento shotgun do genoma completo de indivíduos.</p>
+      <ul><li>Short reads: MiSeq i100 Plus e NextSeq 2000</li><li>Long reads: Nanopore PromethION P2 Solo</li></ul>
+    </button>
+    <button class="choice" data-metodo="rna">
+      <span class="ic" style="background:color-mix(in srgb,var(--m-rna) 14%,transparent)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--m-rna)" stroke-width="2" stroke-linecap="round"><path d="M4 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0"/><path d="M4 18h16M4 6h16" opacity=".4"/></svg></span>
+      <h4>RNAseq</h4>
+      <p>Transcriptoma por tecido, com réplicas. Planejado em número de reads.</p>
+      <ul><li>MiSeq i100 Plus e NextSeq 2000</li></ul>
+    </button>
+    <button class="choice" data-metodo="meta">
+      <span class="ic" style="background:color-mix(in srgb,var(--m-meta) 14%,transparent)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--m-meta)" stroke-width="2" stroke-linecap="round"><path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/><circle cx="10" cy="14" r="1.2" fill="var(--m-meta)"/><circle cx="14" cy="16" r="1.2" fill="var(--m-meta)"/></svg></span>
+      <h4>Metabarcoding</h4>
+      <p>DNA ambiental (água, solo e outros) com amplicons.</p>
+      <ul><li>MiSeq i100 Plus e NextSeq 2000</li></ul>
+    </button>
+  </div>
+</section>
+
+<!-- ===================== 2. ESPÉCIE (WGS e RNAseq) ===================== -->
+<section class="screen" id="s-especie">
+  <div class="screen-head">
+    <span class="tag" id="esp-tag"></span>
+    <h2>Qual é a espécie?</h2>
+    <p>O app busca o tamanho do genoma no GoaT (Genomes on a Tree). Você pode corrigir o valor à mão.</p>
+  </div>
+  <div class="grid2">
+    <div class="card stack">
+      <label class="f">Nome científico
+        <span class="inrow"><input type="text" id="esp-nome" value="Dipteryx alata" autocomplete="off" placeholder="ex.: Dipteryx alata"><button class="btn" id="esp-buscar">Buscar no GoaT</button></span>
+      </label>
+      <div class="goat-box" id="goat-box" aria-live="polite"></div>
+      <label class="f">Tamanho do genoma usado nos cálculos
+        <span class="row2"><input type="number" id="esp-gen" min="0" step="0.001" value="0.85"><select id="esp-gen-u" aria-label="Unidade"><option value="Gb">Gb</option><option value="Mb">Mb</option></select></span>
+      </label>
+      <span class="hint" id="esp-gen-src">Valor digitado.</span>
+    </div>
+    <div class="card stack" id="esp-leitura">
+      <h3>Tipo de leitura</h3>
+      <button class="choice small" data-leitura="short" aria-pressed="true">
+        <h4>Short reads · Illumina</h4>
+        <p>MiSeq i100 Plus e NextSeq 2000. Resequenciamento, genotipagem e montagens com referência.</p>
+      </button>
+      <button class="choice small" data-leitura="long" aria-pressed="false">
+        <h4>Long reads · Oxford Nanopore</h4>
+        <p>PromethION P2 Solo. Montagem <i>de novo</i> e variantes estruturais.</p>
+      </button>
+    </div>
+    <div class="card stack" id="esp-rnainfo" hidden>
+      <h3>Como o genoma entra no RNAseq</h3>
+      <p class="hint" style="font-size:13px;margin:0">No RNAseq o planejamento é feito em <b>número de reads por amostra</b>, não em Gb. O tamanho do genoma serve de referência: genomas grandes, ou espécies sem genoma de referência (montagem <i>de novo</i> do transcriptoma), pedem mais reads por amostra.</p>
+    </div>
+  </div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar</button><button class="btn" id="esp-next">Continuar</button></div>
+</section>
+
+<!-- ===================== WGS SHORT: CONFIG ===================== -->
+<section class="screen" id="s-wgs-short-config">
+  <div class="screen-head"><span class="tag wgs">Genoma total · Short reads</span><h2>Desenho do sequenciamento</h2><p class="species-line"></p></div>
+  <div class="grid2">
+    <div class="card stack">
+      <div><div class="lbl">Cobertura desejada por indivíduo (×)</div><div class="chips" data-chips="ws-cov" data-values="0.5,1,2,3,4,5,6,7,8,9,10,15,20,30"></div></div>
+      <label class="f">Outro valor de cobertura<input type="number" id="ws-cov" min="0.1" step="0.1" value="10"></label>
+      <label class="f">Nº de indivíduos<input type="number" id="ws-n" min="1" step="1" value="96"></label>
+    </div>
+    <div class="card stack">
+      <div><div class="lbl">Equipamento</div>
+        <div class="seg"><input type="radio" name="ws-plat" id="ws-p-all" value="all" checked><label for="ws-p-all">Ambos</label><input type="radio" name="ws-plat" id="ws-p-ns" value="NextSeq"><label for="ws-p-ns">NextSeq 2000</label><input type="radio" name="ws-plat" id="ws-p-ms" value="MiSeq"><label for="ws-p-ms">MiSeq i100 Plus</label></div></div>
+      <div><div class="lbl">Tamanho mínimo dos reads</div>
+        <div class="seg"><input type="radio" name="ws-len" id="ws-l-50" value="100"><label for="ws-l-50">Qualquer</label><input type="radio" name="ws-len" id="ws-l-100" value="200"><label for="ws-l-100">≥ 2×100</label><input type="radio" name="ws-len" id="ws-l-150" value="300" checked><label for="ws-l-150">≥ 2×150</label></div></div>
+      <label class="f">Kit de preparo de biblioteca
+        <select id="ws-kit"><option value="dnaprep">Illumina DNA Prep (96 amostras)</option><option value="none">Não incluir preparo</option></select></label>
+      <details class="adv"><summary>Parâmetros avançados</summary><div class="stack" data-adv="ws"></div></details>
+    </div>
+  </div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar</button><button class="btn" data-next="wgs-short-result">Ver comparação</button></div>
+</section>
+
+<!-- ===================== WGS SHORT: RESULTADO ===================== -->
+<section class="screen" id="s-wgs-short-result">
+  <div class="screen-head"><span class="tag wgs">Genoma total · Short reads</span><h2>Comparação de cartuchos</h2><p class="species-line"></p></div>
+  <div class="tiles" id="wsr-tiles"></div>
+  <div class="card" style="margin-top:12px" id="wsr-rec"></div>
+  <div class="section-head"><h3>Todos os cartuchos</h3><span class="hint">Ordenado pelo custo total · verde = mais barato</span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Equipamento</th><th>Cartucho</th><th>Reads</th><th class="n">Rendimento</th><th class="n">Corridas</th><th class="n">Indiv./corrida</th><th class="n">Cobertura obtida</th><th class="n">Sequenciamento</th><th class="n">Custo total</th><th class="n">Por amostra</th><th></th></tr></thead><tbody id="wsr-list"></tbody></table></div>
+
+  <div class="section-head"><h3>Simular um cartucho específico</h3><span class="hint">Quanto de cobertura cada indivíduo recebe num cartucho escolhido</span></div>
+  <div class="grid2">
+    <div class="card stack">
+      <div class="seg"><input type="radio" name="sim-plat" id="sim-ns" value="NextSeq" checked><label for="sim-ns">NextSeq 2000</label><input type="radio" name="sim-plat" id="sim-ms" value="MiSeq"><label for="sim-ms">MiSeq i100 Plus</label></div>
+      <label class="f">Cartucho<select id="sim-cart"></select></label>
+      <label class="f">Nº de indivíduos na corrida<input type="number" id="sim-n" min="1" step="1" value="40"></label>
+    </div>
+    <div class="card" id="sim-out"></div>
+  </div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar e ajustar</button><button class="btn ghost" data-home>Novo planejamento</button></div>
+</section>
+
+<!-- ===================== WGS LONG: CONFIG ===================== -->
+<section class="screen" id="s-wgs-long-config">
+  <div class="screen-head"><span class="tag wgs">Genoma total · Long reads</span><h2>Desenho do sequenciamento Nanopore</h2><p class="species-line"></p></div>
+  <div class="grid2">
+    <div class="card stack">
+      <div><div class="lbl">Cobertura desejada por indivíduo (×)</div><div class="chips" data-chips="wl-cov" data-values="10,15,20,25,30,40,50,60"></div></div>
+      <label class="f">Outro valor de cobertura<input type="number" id="wl-cov" min="1" step="1" value="30"></label>
+      <label class="f">Nº de indivíduos<input type="number" id="wl-n" min="1" step="1" value="1"></label>
+      <span class="hint">Pela planilha: 1 flowcell (280 Gb, 60% de redução = 112 Gb) dá cerca de 132× para um genoma de 0,85 Gb.</span>
+    </div>
+    <div class="card stack">
+      <div class="inrow"><label class="f">Rendimento nominal da flowcell (Gb)<input type="number" id="wl-nom" min="1" step="1" value="280"></label>
+        <label class="f">Redução do rendimento (%)<input type="number" id="wl-red" min="0" max="95" step="1" value="60"></label></div>
+      <div><div class="lbl">Redução rápida</div><div class="chips" data-chips="wl-red" data-values="40,50,60,70" data-fmt="pct"></div></div>
+      <div class="tile" style="background:var(--bg)"><div class="k">Rendimento efetivo por flowcell</div><div class="v" id="wl-ef">112<small>Gb</small></div><div class="s">Com 4 bibliotecas e 4 lavagens por flowcell, como na sua planilha.</div></div>
+      <label class="f">Kit de preparo de biblioteca<select id="wl-kit"></select></label>
+      <label class="check"><input type="checkbox" id="wl-mux"> Multiplexar indivíduos com barcode na mesma flowcell</label>
+      <details class="adv"><summary>Parâmetros avançados</summary><div class="stack">
+        <div class="inrow"><label class="f">Bibliotecas por flowcell<input type="number" id="wl-libs" min="1" step="1" value="4"></label>
+        <label class="f">Lavagens por flowcell<input type="number" id="wl-wash" min="0" step="1" value="4"></label></div>
+        <label class="check"><input type="checkbox" id="wl-neb" checked> Incluir kit NEB (1 unidade por biblioteca)</label>
+        <label class="f">Custo dos reagentes<select id="wl-modo"><option value="inteiro">Kits e caixas inteiras (orçamento de compra)</option><option value="prop">Proporcional ao que é usado</option></select></label>
+        <label class="f">Duração de cada rodada (h)<input type="number" id="wl-horas" min="1" step="1" value="72"></label>
+      </div></details>
+    </div>
+  </div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar</button><button class="btn" data-next="wgs-long-result">Ver resultado</button></div>
+</section>
+
+<!-- ===================== WGS LONG: RESULTADO ===================== -->
+<section class="screen" id="s-wgs-long-result">
+  <div class="screen-head"><span class="tag wgs">Genoma total · Long reads</span><h2>Flowcells e custo estimado</h2><p class="species-line"></p></div>
+  <div class="tiles" id="wlr-tiles"></div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><h3>Custo estimado</h3><div class="cost" id="wlr-cost"></div><div class="alerts" id="wlr-alerts"></div></div>
+    <div class="card"><h3>E se a redução de rendimento mudar?</h3><div class="tbl-wrap" style="border:0"><table><thead><tr><th class="n">Redução</th><th class="n">Gb efetivos/FC</th><th class="n">Flowcells</th><th class="n">Cobertura obtida</th><th class="n">Custo total</th></tr></thead><tbody id="wlr-sens"></tbody></table></div></div>
+  </div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar e ajustar</button><div class="btns"><button class="btn ghost" id="wlr-save">Salvar cenário</button><button class="btn ghost" data-home>Novo planejamento</button></div></div>
+</section>
+
+<!-- ===================== RNASEQ: CONFIG ===================== -->
+<section class="screen" id="s-rna-config">
+  <div class="screen-head"><span class="tag rna">RNAseq</span><h2>Desenho experimental</h2><p class="species-line"></p></div>
+  <div class="grid2">
+    <div class="card stack">
+      <label class="f">Nº de tecidos<input type="number" id="rn-tec" min="1" step="1" value="3"></label>
+      <label class="f">Réplicas biológicas por tecido<input type="number" id="rn-rep" min="1" step="1" value="3"></label>
+      <label class="f">Condições / tratamentos<input type="number" id="rn-cond" min="1" step="1" value="1"></label>
+      <div class="tile" style="background:var(--bg)"><div class="k">Total de amostras (bibliotecas)</div><div class="v" id="rn-total">9</div><div class="s" id="rn-total-s"></div></div>
+    </div>
+    <div class="card stack">
+      <div><div class="lbl">Reads por amostra (milhões de pares)</div><div class="chips" data-chips="rn-reads" data-values="10,20,30,40,50,80,100"></div></div>
+      <label class="f">Outro valor (M reads por amostra)<input type="number" id="rn-reads" min="0.1" step="1" value="30"></label>
+      <div class="hint" id="rn-reads-hint"></div>
+      <div><div class="lbl">Equipamento</div>
+        <div class="seg"><input type="radio" name="rn-plat" id="rn-p-all" value="all" checked><label for="rn-p-all">Ambos</label><input type="radio" name="rn-plat" id="rn-p-ns" value="NextSeq"><label for="rn-p-ns">NextSeq 2000</label><input type="radio" name="rn-plat" id="rn-p-ms" value="MiSeq"><label for="rn-p-ms">MiSeq i100 Plus</label></div></div>
+      <div><div class="lbl">Tamanho mínimo dos reads</div>
+        <div class="seg"><input type="radio" name="rn-len" id="rn-l-any" value="100"><label for="rn-l-any">Qualquer</label><input type="radio" name="rn-len" id="rn-l-100" value="200" checked><label for="rn-l-100">≥ 2×100</label><input type="radio" name="rn-len" id="rn-l-150" value="300"><label for="rn-l-150">≥ 2×150</label></div></div>
+      <label class="f">Kit de preparo<select id="rn-kit"><option value="rna_mrna">Illumina Stranded mRNA Prep (96)</option><option value="rna_total">Illumina Stranded Total RNA Prep, Ribo-Zero Plus (96)</option><option value="none">Não incluir preparo</option></select></label>
+      <details class="adv"><summary>Parâmetros avançados</summary><div class="stack" data-adv="rn"></div></details>
+    </div>
+  </div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar</button><button class="btn" data-next="rna-result">Ver comparação</button></div>
+</section>
+
+<!-- ===================== RNASEQ: RESULTADO ===================== -->
+<section class="screen" id="s-rna-result">
+  <div class="screen-head"><span class="tag rna">RNAseq</span><h2>Comparação de cartuchos</h2><p class="species-line"></p></div>
+  <div class="tiles" id="rnr-tiles"></div>
+  <div class="card" style="margin-top:12px" id="rnr-rec"></div>
+  <div class="section-head"><h3>Todos os cartuchos</h3><span class="hint">Ordenado pelo custo total · verde = mais barato</span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Equipamento</th><th>Cartucho</th><th>Reads</th><th class="n">Reads/corrida</th><th class="n">Corridas</th><th class="n">Amostras/corrida</th><th class="n">M reads obtidos/amostra</th><th class="n">Sequenciamento</th><th class="n">Custo total</th><th class="n">Por amostra</th><th></th></tr></thead><tbody id="rnr-list"></tbody></table></div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar e ajustar</button><button class="btn ghost" data-home>Novo planejamento</button></div>
+</section>
+
+<!-- ===================== METABARCODING: AMOSTRAS ===================== -->
+<section class="screen" id="s-meta-amostras">
+  <div class="screen-head"><span class="tag meta">Metabarcoding</span><h2>Que tipo de DNA ambiental?</h2><p>Escolha a matriz, o marcador e quantas amostras serão coletadas.</p></div>
+  <div class="grid3" id="meta-tipos"></div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card stack">
+      <label class="f">Marcador (região amplificada)<select id="mt-marc"></select></label>
+      <label class="f">Tamanho do amplicon (pb, sem primers)<input type="number" id="mt-amp" min="20" step="1" value="170"></label>
+      <span class="hint" id="mt-amp-hint"></span>
+    </div>
+    <div class="card stack">
+      <label class="f">Nº de amostras de campo<input type="number" id="mt-n" min="1" step="1" value="48"></label>
+      <label class="f">Nº de marcadores por amostra<input type="number" id="mt-nmarc" min="1" step="1" value="1"></label>
+      <span class="hint">Cada marcador gera uma biblioteca separada para cada amostra.</span>
+    </div>
+  </div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar</button><button class="btn" data-next="meta-config">Continuar</button></div>
+</section>
+
+<!-- ===================== METABARCODING: CONFIG ===================== -->
+<section class="screen" id="s-meta-config">
+  <div class="screen-head"><span class="tag meta">Metabarcoding</span><h2>Réplicas, pools e profundidade</h2><p id="meta-line"></p></div>
+  <div class="grid2">
+    <div class="card stack">
+      <label class="f">Réplicas biológicas por amostra<input type="number" id="mt-rep" min="1" step="1" value="3"></label>
+      <div><div class="lbl">As réplicas formarão pool antes do preparo da biblioteca?</div>
+        <div class="seg"><input type="radio" name="mt-pool" id="mt-pool-n" value="nao" checked><label for="mt-pool-n">Não · 1 biblioteca por réplica</label><input type="radio" name="mt-pool" id="mt-pool-s" value="sim"><label for="mt-pool-s">Sim · 1 biblioteca por amostra</label></div></div>
+      <label class="f">Controles negativos (brancos de extração e PCR)<input type="number" id="mt-ctrl" min="0" step="1" value="4"></label>
+      <div class="tile" style="background:var(--bg)"><div class="k">Total de bibliotecas</div><div class="v" id="mt-libs">0</div><div class="s" id="mt-libs-s"></div></div>
+    </div>
+    <div class="card stack">
+      <div><div class="lbl">Reads por biblioteca (pares)</div><div class="chips" data-chips="mt-reads" data-values="20000,50000,100000,200000,500000,1000000" data-fmt="k"></div></div>
+      <label class="f">Outro valor (reads por biblioteca)<input type="number" id="mt-reads" min="1000" step="1000" value="100000"></label>
+      <div><div class="lbl">Equipamento</div>
+        <div class="seg"><input type="radio" name="mt-plat" id="mt-p-all" value="all" checked><label for="mt-p-all">Ambos</label><input type="radio" name="mt-plat" id="mt-p-ns" value="NextSeq"><label for="mt-p-ns">NextSeq 2000</label><input type="radio" name="mt-plat" id="mt-p-ms" value="MiSeq"><label for="mt-p-ms">MiSeq i100 Plus</label></div></div>
+      <label class="check"><input type="checkbox" id="mt-short"> Mostrar cartuchos com reads curtos demais para o amplicon</label>
+      <details class="adv"><summary>Parâmetros avançados</summary><div class="stack">
+        <label class="f">PhiX na corrida (%)<input type="number" id="mt-phix" min="0" max="60" step="1" value="15"></label>
+        <span class="hint">Amplicons têm baixa diversidade de bases; o usual é 10–20% de PhiX.</span>
+        <label class="f">Margem de perdas (%)<input type="number" id="mt-margem" min="0" max="80" step="1" value="10"></label>
+        <label class="f">Sobreposição mínima entre R1 e R2 (pb)<input type="number" id="mt-overlap" min="0" step="1" value="20"></label>
+        <label class="check"><input type="checkbox" id="mt-index" checked> Incluir conjunto de index (384)</label>
+        <label class="check"><input type="checkbox" id="mt-phixkit" checked> Incluir kit PhiX (5 corridas/kit)</label>
+        <label class="check"><input type="checkbox" id="mt-beads" checked> Incluir beads (2 purificações por biblioteca)</label>
+      </div></details>
+    </div>
+  </div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar</button><button class="btn" data-next="meta-result">Ver comparação</button></div>
+</section>
+
+<!-- ===================== METABARCODING: RESULTADO ===================== -->
+<section class="screen" id="s-meta-result">
+  <div class="screen-head"><span class="tag meta">Metabarcoding</span><h2>Comparação de cartuchos</h2><p id="meta-line2"></p></div>
+  <div class="tiles" id="mtr-tiles"></div>
+  <div class="card" style="margin-top:12px" id="mtr-rec"></div>
+  <div class="section-head"><h3>Todos os cartuchos</h3><span class="hint">Ordenado pelo custo total · verde = mais barato</span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Equipamento</th><th>Cartucho</th><th>Reads</th><th class="n">Reads/corrida</th><th class="n">Corridas</th><th class="n">Bibliotecas/corrida</th><th class="n">Reads obtidos/biblioteca</th><th class="n">Sequenciamento</th><th class="n">Custo total</th><th class="n">Por amostra</th><th></th></tr></thead><tbody id="mtr-list"></tbody></table></div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar e ajustar</button><button class="btn ghost" data-home>Novo planejamento</button></div>
+</section>
+
+<!-- ===================== CENÁRIOS ===================== -->
+<section class="screen" id="s-cenarios">
+  <div class="screen-head"><h2>Cenários salvos</h2><p>Guarde opções de qualquer metodologia e compare lado a lado. Use “Salvar” nas tabelas de resultado.</p></div>
+  <div class="btns" style="margin-bottom:10px"><button class="btn ghost sm" id="cen-copy">Copiar para Excel</button><button class="btn ghost sm" id="cen-csv">Exportar CSV</button><button class="btn ghost sm" id="cen-clear">Limpar tudo</button></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Metodologia</th><th>Espécie / amostra</th><th>Desenho</th><th>Equipamento e kit</th><th>Resultado</th><th class="n">Custo total</th><th class="n">Por amostra</th><th></th></tr></thead><tbody id="cen-list"></tbody></table></div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar</button></div>
+</section>
+
+<!-- ===================== PREÇOS ===================== -->
+<section class="screen" id="s-precos">
+  <div class="screen-head"><h2>Preços e kits</h2><p>Altere qualquer valor e os cálculos se atualizam. As alterações ficam salvas neste computador. Itens marcados <span class="prov">PROVISÓRIO</span> não estão nas suas planilhas: preencha o preço para que entrem no total.</p></div>
+  <div class="btns" style="margin-bottom:12px"><button class="btn ghost sm" id="pr-reset">Restaurar valores originais</button></div>
+  <h3 style="font-size:14px;margin:6px 0 8px">Illumina · cartuchos de sequenciamento</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>Equipamento</th><th>Código</th><th>Cartucho</th><th>Reads</th><th class="n">Clusters</th><th class="n">Rendimento</th><th class="n">Preço (R$)</th><th class="n">R$/Gb</th></tr></thead><tbody id="pr-cart"></tbody></table></div>
+  <h3 style="font-size:14px;margin:18px 0 8px">Illumina · preparo de bibliotecas e consumíveis</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>Código</th><th>Item</th><th>Uso</th><th class="n">Rende</th><th class="n">Preço (R$)</th><th class="n">R$/unidade</th></tr></thead><tbody id="pr-prep"></tbody></table></div>
+  <h3 style="font-size:14px;margin:18px 0 8px">Oxford Nanopore · PromethION P2 Solo</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>Código</th><th>Item</th><th>Uso</th><th class="n">Rende</th><th class="n">Preço (R$)</th><th class="n">R$/unidade</th></tr></thead><tbody id="pr-ont"></tbody></table></div>
+  <div class="footer-nav"><button class="btn ghost" data-back>Voltar</button></div>
+</section>
+</main>
+
+<footer id="foot">Illumina: rendimento líquido = rendimento do cartucho × (1 − PhiX) × (1 − margem); reads = clusters (pares em corridas paired-end). Nanopore: rendimento efetivo = rendimento nominal da flowcell × (1 − redução). Preços de referência: junho/2026. Tamanho de genoma: GoaT, goat.genomehubs.org.</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+/* ======================= DADOS ======================= */
+const CART_DEFAULT = [
+  {id:"20100983",plat:"NextSeq",fc:"P1",cyc:100,gb:10,reads:100,nome:"NextSeq 1000/2000 P1 XLEAP-SBS Reagent Kit (100 Cycles)",preco:5012},
+  {id:"20100982",plat:"NextSeq",fc:"P1",cyc:300,gb:30,reads:100,nome:"NextSeq 1000/2000 P1 XLEAP-SBS Reagent Kit (300 Cycles)",preco:6962},
+  {id:"20100981",plat:"NextSeq",fc:"P1",cyc:600,gb:60,reads:100,nome:"NextSeq 1000/2000 P1 XLEAP-SBS Reagent Kit (600 Cycles)",preco:10581},
+  {id:"20100987",plat:"NextSeq",fc:"P2",cyc:100,gb:40,reads:400,nome:"NextSeq 1000/2000 P2 XLEAP-SBS Reagent Kit (100 Cycles)",preco:7602},
+  {id:"20100986",plat:"NextSeq",fc:"P2",cyc:200,gb:80,reads:400,nome:"NextSeq 1000/2000 P2 XLEAP-SBS Reagent Kit (200 Cycles)",preco:14292},
+  {id:"20100985",plat:"NextSeq",fc:"P2",cyc:300,gb:120,reads:400,nome:"NextSeq 1000/2000 P2 XLEAP-SBS Reagent Kit (300 Cycles)",preco:18950},
+  {id:"20100984",plat:"NextSeq",fc:"P2",cyc:600,gb:240,reads:400,nome:"NextSeq 1000/2000 P2 XLEAP-SBS Reagent Kit (600 Cycles)",preco:20626},
+  {id:"20100990",plat:"NextSeq",fc:"P3",cyc:100,gb:110,reads:1100,nome:"NextSeq 2000 P3 XLEAP-SBS Reagent Kit (100 Cycles)",preco:16234},
+  {id:"20100989",plat:"NextSeq",fc:"P3",cyc:200,gb:220,reads:1100,nome:"NextSeq 2000 P3 XLEAP-SBS Reagent Kit (200 Cycles)",preco:22479},
+  {id:"20100988",plat:"NextSeq",fc:"P3",cyc:300,gb:330,reads:1100,nome:"NextSeq 2000 P3 XLEAP-SBS Reagent Kit (300 Cycles)",preco:29970},
+  {id:"20100994",plat:"NextSeq",fc:"P4",cyc:100,gb:180,reads:1800,nome:"NextSeq 2000 P4 XLEAP-SBS Reagent Kit (100 Cycles)",preco:18797},
+  {id:"20100993",plat:"NextSeq",fc:"P4",cyc:200,gb:360,reads:1800,nome:"NextSeq 2000 P4 XLEAP-SBS Reagent Kit (200 Cycles)",preco:26579},
+  {id:"20100992",plat:"NextSeq",fc:"P4",cyc:300,gb:540,reads:1800,nome:"NextSeq 2000 P4 XLEAP-SBS Reagent Kit (300 Cycles)",preco:33833},
+  {id:"20126565",plat:"MiSeq",fc:"5M",cyc:300,gb:1.5,reads:5,nome:"MiSeq i100 Series 5M Reagent Kit (300 cycles)",preco:3218},
+  {id:"20126566",plat:"MiSeq",fc:"5M",cyc:600,gb:3,reads:5,nome:"MiSeq i100 Series 5M Reagent Kit (600 cycles)",preco:4980},
+  {id:"20126567",plat:"MiSeq",fc:"25M",cyc:100,gb:2.5,reads:25,nome:"MiSeq i100 Series 25M Reagent Kit (100 cycles)",preco:4214},
+  {id:"20126568",plat:"MiSeq",fc:"25M",cyc:300,gb:7.5,reads:25,nome:"MiSeq i100 Series 25M Reagent Kit (300 cycles)",preco:6895},
+  {id:"20115696",plat:"MiSeq",fc:"25M",cyc:600,gb:15,reads:25,nome:"MiSeq i100 Series 25M Reagent Kit (600 cycles)",preco:8428},
+  {id:"20148254",plat:"MiSeq",fc:"25M",cyc:1000,gb:25,reads:25,nome:"MiSeq i100 Series 25M Rgt Kit (1000 cycles)",preco:12462},
+  {id:"20141595",plat:"MiSeq",fc:"50M",cyc:100,gb:5,reads:50,nome:"MiSeq i100 Series 50M Reagent Kit (100 cycles)",preco:5499},
+  {id:"20141596",plat:"MiSeq",fc:"50M",cyc:300,gb:15,reads:50,nome:"MiSeq i100 Series 50M Reagent Kit (300 cycles)",preco:8064},
+  {id:"20141597",plat:"MiSeq",fc:"50M",cyc:600,gb:30,reads:50,nome:"MiSeq i100 Series 50M Reagent Kit (600 cycles)",preco:10630},
+  {id:"20141598",plat:"MiSeq",fc:"100M",cyc:100,gb:10,reads:100,nome:"MiSeq i100 Series 100M Reagent Kit (100 cycles)",preco:7331},
+  {id:"20141599",plat:"MiSeq",fc:"100M",cyc:300,gb:30,reads:100,nome:"MiSeq i100 Series 100M Reagent Kit (300 cycles)",preco:10630}
+];
+/* preco null = ainda sem valor (aparece como "a preencher") ; prov = provisório */
+const PREP_DEFAULT = [
+  {key:"dnaprep",cod:"20060059",nome:"ILMN DNA LP (M)Tag (96 Spl, IPB)",uso:"Illumina DNA Prep (shotgun)",cap:96,un:"amostras",preco:24853},
+  {key:"index",cod:"20043137",nome:"IDT-ILMN PCR Index Set 1-4 (384 IDX)",uso:"Index (4 placas, 384 combinações)",cap:384,un:"amostras",preco:12217},
+  {key:"phix",cod:"15017872",nome:"PhiX CONTROL V3 KIT",uso:"Controle PhiX",cap:5,un:"corridas",preco:1624},
+  {key:"beads",cod:"20060057",nome:"Illumina Purification Bead, 100mL",uso:"Beads de purificação",cap:960,un:"amostras",preco:9478},
+  {key:"rna_mrna",cod:"",nome:"Illumina Stranded mRNA Prep (96)",uso:"RNAseq · mRNA (poli-A)",cap:96,un:"amostras",preco:null,prov:true},
+  {key:"rna_total",cod:"",nome:"Illumina Stranded Total RNA Prep, Ribo-Zero Plus (96)",uso:"RNAseq · RNA total",cap:96,un:"amostras",preco:null,prov:true},
+  {key:"meta_lib",cod:"",nome:"Preparo de biblioteca de amplicon (PCR 1 + PCR 2)",uso:"Metabarcoding · por biblioteca",cap:1,un:"biblioteca",preco:null,prov:true}
+];
+/* Planilha "Cálculo rendimento Nanopore" */
+const ONT_DEFAULT = [
+  {key:"fc",cod:"NANO-FLOPRO114M-4UN",nome:"FC PromethION R10.4.1",uso:"Sequenciamento · embalagem com 4 flowcells",cap:4,un:"flowcells",preco:61000},
+  {key:"lsk",cod:"SQK-LSK114",nome:"Kit de ligação Nanopore",uso:"Preparo de biblioteca sem barcode",cap:6,un:"bibliotecas",mux:1,preco:10560.79},
+  {key:"nbd24",cod:"SQK-NBD114.24",nome:"Native Barcode 24",uso:"Preparo com barcode · até 24 amostras por biblioteca",cap:6,un:"bibliotecas",mux:24,preco:12461},
+  {key:"neb",cod:"E7672S",nome:"Kit NEB para bibliotecas Nanopore",uso:"Módulo NEB · 1 unidade por biblioteca",cap:24,un:"bibliotecas",preco:8993.69},
+  {key:"wash",cod:"NANO-EXPWSH004XL",nome:"Kit de lavagem FC",uso:"Lavagem da flowcell entre cargas",cap:48,un:"lavagens",preco:7290}
+];
+const MARCADORES = [
+  {k:"12s-mifish",n:"12S rRNA · MiFish-U (peixes)",amp:170},
+  {k:"12s-v5",n:"12S rRNA · V5 (vertebrados)",amp:100},
+  {k:"16s-v4",n:"16S rRNA · V4 (bactérias)",amp:253},
+  {k:"16s-v34",n:"16S rRNA · V3–V4 (bactérias)",amp:460},
+  {k:"18s-v4",n:"18S rRNA · V4 (eucariotos)",amp:380},
+  {k:"18s-v9",n:"18S rRNA · V9 (eucariotos)",amp:130},
+  {k:"coi-leray",n:"COI · Leray/mlCOIintF (metazoários)",amp:313},
+  {k:"its2",n:"ITS2 (fungos e plantas)",amp:350},
+  {k:"trnl",n:"trnL P6 (plantas)",amp:143},
+  {k:"outro",n:"Outro (informar tamanho)",amp:200}
+];
+const TIPOS_EDNA = [
+  {k:"agua",n:"Água",d:"Rios, lagos, mar. Filtração de volume conhecido."},
+  {k:"solo",n:"Solo",d:"Amostras compostas de superfície ou perfil."},
+  {k:"sedimento",n:"Sedimento",d:"Fundo de rios, lagos ou estuários."},
+  {k:"fezes",n:"Fezes / conteúdo estomacal",d:"Dieta e microbioma."},
+  {k:"ar",n:"Ar",d:"Filtros de ar, pólen e esporos."},
+  {k:"bulk",n:"Bulk / armadilhas",d:"Invertebrados de armadilha ou tecido misto."}
+];
+
+/* ======================= ESTADO / ARMAZENAMENTO ======================= */
+const LS_KEY = "gencalclgbio.v2";
+function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }catch(e){ return {}; } }
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(store)); }catch(e){} }
+const store = load();
+const clone = o => JSON.parse(JSON.stringify(o));
+let CART = clone(CART_DEFAULT), PREP = clone(PREP_DEFAULT), ONT = clone(ONT_DEFAULT);
+function applyStoredPrices(){
+  const p = store.precos || {};
+  CART.forEach(c=>{ if(p["c:"+c.id]!==undefined) c.preco = p["c:"+c.id]; });
+  PREP.forEach(c=>{ if(p["p:"+c.key]!==undefined) c.preco = p["p:"+c.key]; if(p["pc:"+c.key]!==undefined) c.cap = p["pc:"+c.key]; });
+  ONT.forEach(c=>{ if(p["o:"+c.key]!==undefined) c.preco = p["o:"+c.key]; if(p["oc:"+c.key]!==undefined) c.cap = p["oc:"+c.key]; });
+}
+applyStoredPrices();
+let cenarios = Array.isArray(store.cenarios) ? store.cenarios : [];
+const S = { metodo:null, leitura:"short", tipoEdna:"agua", history:["home"], goat:null };
+
+/* ======================= UTILITÁRIOS ======================= */
+const $ = id => document.getElementById(id);
+const nf = (v,d=2) => (v!=null && isFinite(v)) ? v.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d}) : "–";
+const nfa = v => { if(v==null||!isFinite(v)) return "–"; const a=Math.abs(v); const d = a>=100?0:a>=10?1:2; return nf(v,d); };
+const ni = v => (v!=null && isFinite(v)) ? Math.round(v).toLocaleString("pt-BR") : "–";
+const brl = v => (v!=null && isFinite(v)) ? v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2}) : "–";
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = (id,def=0) => { const el=$(id); if(!el) return def; const v = parseFloat(String(el.value).replace(",", ".")); return isFinite(v) ? v : def; };
+const int = (id,def=1) => Math.max(def, Math.round(num(id,def)));
+const pct = (id,def) => Math.min(Math.max(num(id,def),0),95)/100;
+const radio = name => (document.querySelector('input[name="'+name+'"]:checked')||{}).value;
+const leitura = c => c.cyc===1000 ? "2×500" : "2×"+(c.cyc/2);
+const readsTxt = m => m>=1000 ? nf(m/1000,1)+" B" : nf(m,0)+" M";
+const gbTxt = g => nf(g, g<10&&g%1?1:0)+" Gb";
+const platName = p => p==="NextSeq" ? "NextSeq 2000" : "MiSeq i100 Plus";
+const cartShort = c => (c.plat==="NextSeq"?"NextSeq ":"MiSeq i100 ")+c.fc+" · "+c.cyc+" ciclos";
+const readsFmt = r => r>=1e6 ? nf(r/1e6, r%1e6?1:0)+" M" : r>=1000 ? nf(r/1000, r%1000?1:0)+" mil" : ni(r);
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),1900); }
+const prep = k => PREP.find(p=>p.key===k);
+const ont = k => ONT.find(p=>p.key===k);
+function especie(){ return $("esp-nome").value.trim() || "Espécie não informada"; }
+function genomaGb(){ const v = num("esp-gen",0); return $("esp-gen-u").value==="Mb" ? v/1000 : v; }
+
+/* Item de custo; preço nulo fica pendente */
+function item(nome, qtd, preco, mult){ return {nome, qtd, valor: preco==null ? null : preco*mult}; }
+function somar(itens){ return {itens, total: itens.reduce((s,i)=>s+(i.valor||0),0), pend: itens.filter(i=>i.valor==null).length}; }
+function costHTML(c){
+  return c.itens.map(i=>'<span class="l">'+esc(i.nome)+' <span class="hint">('+esc(i.qtd)+')</span></span><span class="r">'+(i.valor==null?'<span class="pill warn">a preencher</span>':brl(i.valor))+'</span>').join("")+
+    '<span class="l tot">Total'+(c.pend?' parcial':'')+'</span><span class="r tot">'+brl(c.total)+'</span>';
+}
+function pendAlert(n){ return n ? '<div class="alert warn">'+n+' item'+(n>1?'s':'')+' sem preço. O total está incompleto; preencha em “Preços e kits”.</div>' : ""; }
+
+/* Parâmetros avançados Illumina (PhiX, margem, index, PhiX kit, beads) reaproveitados em WGS e RNAseq */
+function advIllumina(prefix, phix, margem, withBeads){
+  return '<label class="f">PhiX na corrida (%)<input type="number" id="'+prefix+'-phix" min="0" max="60" step="0.5" value="'+phix+'"></label>'+
+  '<label class="f">Margem de perdas (%)<input type="number" id="'+prefix+'-margem" min="0" max="80" step="1" value="'+margem+'"></label>'+
+  '<span class="hint">Duplicatas, filtragem por qualidade e desbalanço do pool. 10–20% dá uma estimativa mais realista.</span>'+
+  '<label class="f">Custo do preparo<select id="'+prefix+'-modo"><option value="inteiro">Kits inteiros (orçamento de compra)</option><option value="prop">Proporcional ao nº de amostras</option></select></label>'+
+  '<label class="check"><input type="checkbox" id="'+prefix+'-index" checked> Incluir conjunto de index (384)</label>'+
+  '<label class="check"><input type="checkbox" id="'+prefix+'-phixkit" checked> Incluir kit PhiX (5 corridas/kit)</label>'+
+  '<label class="check"><input type="checkbox" id="'+prefix+'-beads"'+(withBeads?' checked':'')+'> Incluir beads de purificação (960 amostras/frasco)</label>';
+}
+document.querySelector('[data-adv="ws"]').innerHTML = advIllumina("ws",1,0,true);
+document.querySelector('[data-adv="rn"]').innerHTML = advIllumina("rn",1,0,false);
+
+function prepIllumina(prefix, kitKey, N){
+  const modo = $(prefix+"-modo") ? $(prefix+"-modo").value : "inteiro", it = [];
+  const add = (p) => {
+    if(!p) return;
+    if(modo==="inteiro"){ const q=Math.ceil(N/p.cap); it.push(item(p.uso, N+" "+p.un+" → "+q+(p.key==="index"?" conj.":p.key==="beads"?" frasco"+(q>1?"s":""):" kit"+(q>1?"s":"")), p.preco, q)); }
+    else it.push(item(p.uso, N+" "+p.un, p.preco, N/p.cap));
+  };
+  if(kitKey && kitKey!=="none") add(prep(kitKey));
+  if($(prefix+"-index") && $(prefix+"-index").checked) add(prep("index"));
+  if($(prefix+"-beads") && $(prefix+"-beads").checked) add(prep("beads"));
+  return it;
+}
+/* PhiX depende do nº de corridas (5 corridas por kit) */
+function phixItem(prefix, corridas){
+  if(!($(prefix+"-phixkit") && $(prefix+"-phixkit").checked)) return null;
+  const p=prep("phix"), modo=$(prefix+"-modo")?$(prefix+"-modo").value:"inteiro";
+  const q = modo==="inteiro" ? Math.ceil(corridas/p.cap) : corridas/p.cap;
+  return item(p.uso, corridas+" corrida"+(corridas>1?"s":"")+(modo==="inteiro"?" → "+q+" kit"+(q>1?"s":""):""), p.preco, q);
+}
+
+/* Motor genérico de comparação Illumina.
+   metric "gb" (WGS) ou "reads" (RNAseq/metabarcoding, em milhões de clusters). */
+function compararIllumina(o){
+  const prepCost = somar(o.prepItens);
+  let rows = CART.filter(c => (o.plat==="all"||c.plat===o.plat)).map(c=>{
+    const cap = (o.metric==="gb" ? c.gb : c.reads) * (1-o.phix) * (1-o.margem);
+    const total = o.porLib * o.N;
+    const porLimite = o.index ? 384 : Infinity;
+    const maxLib = o.porLib>0 ? Math.min(Math.floor(cap/o.porLib + 1e-9), porLimite) : porLimite;
+    const corridas = Math.max(1, Math.ceil(total/cap - 1e-9), o.index ? Math.ceil(o.N/384) : 1);
+    const obtido = cap*corridas/o.N;
+    const seq = c.preco==null ? null : corridas*c.preco;
+    const ph = o.phixPrefix ? phixItem(o.phixPrefix, corridas) : null;
+    const prepRow = somar(prepCost.itens.concat(ph?[ph]:[]));
+    const tot = (seq||0) + prepRow.total;
+    const curto = o.minCyc && c.cyc < o.minCyc;
+    return {c,cap,corridas,maxLib,obtido,seq,tot,porAmostra:tot/(o.Nbase||o.N),curto,prepRow};
+  });
+  const visiveis = rows.filter(r=>!r.curto || o.mostrarCurtos);
+  visiveis.sort((a,b)=> (a.curto-b.curto) || a.tot-b.tot || a.corridas-b.corridas || b.obtido-a.obtido);
+  return {rows:visiveis, prepCost};
+}
+function tabelaIllumina(tbody, res, o){
+  if(!res.rows.length){ $(tbody).innerHTML = '<tr><td colspan="11" class="empty">Nenhum cartucho com esses filtros.</td></tr>'; return; }
+  const bestIdx = res.rows.findIndex(r=>!r.curto);
+  $(tbody).innerHTML = res.rows.map((r,i)=>{
+    const capTxt = o.metric==="gb" ? gbTxt(r.c.gb) : readsTxt(r.c.reads);
+    const obt = o.metric==="gb" ? nfa(r.obtido/o.G)+"×" : o.unidade==="un" ? readsFmt(r.obtido*1e6) : nf(r.obtido, r.obtido<10?1:0)+" M";
+    return '<tr class="'+(i===bestIdx?'best':'')+(r.curto?' dim':'')+'"><td>'+platName(r.c.plat)+'</td>'+
+      '<td title="'+esc(r.c.nome)+'">'+esc(r.c.fc+" · "+r.c.cyc+" ciclos")+' <span class="hint">'+r.c.id+'</span></td>'+
+      '<td><span class="pill '+(r.curto?'bad':r.c.cyc===100?'warn':'info')+'">'+leitura(r.c)+'</span></td>'+
+      '<td class="n">'+capTxt+'</td>'+
+      '<td class="n">'+(r.corridas===1?'<span class="pill good">1</span>':'<span class="pill warn">'+r.corridas+'</span>')+'</td>'+
+      '<td class="n">'+(r.maxLib<1?'<span class="pill warn">&lt; 1</span>':ni(r.maxLib))+'</td>'+
+      '<td class="n">'+obt+'</td><td class="n">'+(r.seq==null?'<span class="pill warn">sem preço</span>':brl(r.seq))+'</td><td class="n"><b>'+brl(r.tot)+'</b></td><td class="n">'+brl(r.porAmostra)+'</td>'+
+      '<td><button class="btn ghost sm" data-save="'+i+'">Salvar</button></td></tr>';
+  }).join("");
+}
+function recIllumina(el, res, o, extra){
+  const ok = res.rows.filter(r=>!r.curto);
+  if(!ok.length){ $(el).innerHTML = '<h3>Opção mais barata</h3><p class="hint">Nenhum cartucho atende aos filtros. Mude o equipamento ou o tamanho mínimo dos reads.</p>'; return; }
+  const b = ok[0], one = ok.find(r=>r.corridas===1);
+  const obt = o.metric==="gb" ? nfa(b.obtido/o.G)+"× obtidos" : (o.unidade==="un"? readsFmt(b.obtido*1e6) : nf(b.obtido,1)+" M")+" reads por "+(o.unidade==="un"?"biblioteca":"amostra");
+  $(el).innerHTML = '<h3>Opção mais barata</h3><div class="rec"><div style="margin-right:auto"><div class="big">'+esc(b.c.nome)+'</div><div class="hint">'+platName(b.c.plat)+' · código '+b.c.id+' · reads '+leitura(b.c)+' · '+b.corridas+' corrida'+(b.corridas>1?'s':'')+'</div></div>'+
+    '<span class="pill good">'+brl(b.tot)+' no total</span><span class="pill info">'+brl(b.porAmostra)+' por amostra</span><span class="pill info">'+obt+'</span></div>'+
+    '<div class="alerts">'+(one && one!==b ? '<div class="alert info">Em uma única corrida, a opção mais barata é '+esc(cartShort(one.c))+' ('+brl(one.tot)+').</div>' : '')+(extra||"")+pendAlert(b.prepRow.pend)+'</div>'+
+    '<details class="adv" style="margin-top:12px"><summary>Custos de preparo e consumíveis incluídos nesta opção</summary><div class="cost">'+costHTML(b.prepRow)+'</div></details>';
+}
+function covPill(x){
+  if(!isFinite(x)) return "";
+  if(x<5) return '<span class="pill warn">Baixa (&lt;5×)</span>';
+  if(x<15) return '<span class="pill info">Intermediária (5–15×)</span>';
+  if(x<30) return '<span class="pill good">Alta (15–30×)</span>';
+  return '<span class="pill good">Muito alta (≥30×)</span>';
+}
+
+/* ======================= CHIPS ======================= */
+function initChips(){
+  document.querySelectorAll("[data-chips]").forEach(box=>{
+    const target = box.dataset.chips, vals = box.dataset.values.split(",").map(Number), fmt = box.dataset.fmt;
+    const draw = () => { const cur = num(target,0);
+      box.innerHTML = vals.map(v=>'<button type="button" data-v="'+v+'" aria-pressed="'+(Math.abs(v-cur)<1e-9)+'">'+(fmt==="k"?readsFmt(v):fmt==="pct"?nf(v,0)+"%":nf(v, v%1?1:0)+(target.indexOf("cov")>=0?"×":""))+'</button>').join(""); };
+    box.addEventListener("click", e=>{ const b=e.target.closest("[data-v]"); if(!b) return; $(target).value=b.dataset.v; draw(); $(target).dispatchEvent(new Event("input",{bubbles:true})); });
+    $(target).addEventListener("input", draw);
+    draw();
+  });
+}
+
+/* ======================= NAVEGAÇÃO ======================= */
+const FLOWS = {
+  wgsshort:[["home","Metodologia"],["especie","Espécie"],["wgs-short-config","Desenho"],["wgs-short-result","Comparação"]],
+  wgslong:[["home","Metodologia"],["especie","Espécie"],["wgs-long-config","Desenho"],["wgs-long-result","Resultado"]],
+  rna:[["home","Metodologia"],["especie","Espécie"],["rna-config","Desenho"],["rna-result","Comparação"]],
+  meta:[["home","Metodologia"],["meta-amostras","Amostras"],["meta-config","Réplicas e reads"],["meta-result","Comparação"]]
+};
+function flowKey(){ return S.metodo==="wgs" ? (S.leitura==="long"?"wgslong":"wgsshort") : S.metodo; }
+function renderSteps(cur){
+  const f = FLOWS[flowKey()];
+  const el = $("steps");
+  if(!f || !f.some(s=>s[0]===cur)){ el.innerHTML = cur==="home" ? '<span class="st cur"><b>1</b>Metodologia</span>' : ''; return; }
+  const idx = f.findIndex(s=>s[0]===cur);
+  el.innerHTML = f.map((s,i)=>(i?'<span class="sep"></span>':'')+'<span class="st '+(i<idx?'done':i===idx?'cur':'')+'"><b>'+(i+1)+'</b>'+s[1]+'</span>').join("");
+}
+function go(id, push=true){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active", s.id==="s-"+id));
+  if(push && S.history[S.history.length-1]!==id) S.history.push(id);
+  renderSteps(id);
+  if(id==="especie") setupEspecie();
+  refresh(id);
+  window.scrollTo(0,0);
+}
+function back(){ if(S.history.length>1){ S.history.pop(); go(S.history[S.history.length-1], false); } else go("home",false); }
+document.addEventListener("click", e=>{
+  if(e.target.closest("[data-back]")) back();
+  else if(e.target.closest("[data-home]")){ S.history=["home"]; go("home",false); }
+  const n = e.target.closest("[data-next]"); if(n) go(n.dataset.next);
+});
+$("go-home").addEventListener("click",()=>{ S.history=["home"]; go("home",false); });
+$("nav-precos").addEventListener("click",()=>go("precos"));
+$("nav-cen").addEventListener("click",()=>go("cenarios"));
+document.querySelectorAll("[data-metodo]").forEach(b=>b.addEventListener("click",()=>{
+  S.metodo = b.dataset.metodo; S.history=["home"];
+  go(S.metodo==="meta" ? "meta-amostras" : "especie");
+}));
+
+/* ======================= ESPÉCIE + GoaT ======================= */
+function setupEspecie(){
+  const wgs = S.metodo==="wgs";
+  $("esp-tag").className = "tag "+(wgs?"wgs":"rna");
+  $("esp-tag").textContent = wgs ? "Genoma total" : "RNAseq";
+  $("esp-leitura").hidden = !wgs; $("esp-rnainfo").hidden = wgs;
+  if(!S.goat && !$("goat-box").innerHTML) goatIdle();
+}
+document.querySelectorAll("[data-leitura]").forEach(b=>b.addEventListener("click",()=>{
+  S.leitura = b.dataset.leitura;
+  document.querySelectorAll("[data-leitura]").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  renderSteps("especie");
+}));
+$("esp-next").addEventListener("click",()=>{
+  if(!(genomaGb()>0)){ toast("Informe o tamanho do genoma"); $("esp-gen").focus(); return; }
+  go(S.metodo==="rna" ? "rna-config" : S.leitura==="long" ? "wgs-long-config" : "wgs-short-config");
+});
+const GOAT = "https://goat.genomehubs.org";
+const goatLink = n => GOAT+"/search?query="+encodeURIComponent("tax_name("+n+")")+"&result=taxon&includeEstimates=true&taxonomy=ncbi&fields=genome_size";
+function goatIdle(){ $("goat-box").innerHTML = '<span class="hint">Digite o nome científico e clique em “Buscar no GoaT”.</span>'; }
+async function fetchJSON(url){
+  const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 20000);
+  try{
+    const r = await fetch(url,{signal:ctl.signal,headers:{"Accept":"application/json"}});
+    if(!r.ok){ let body=""; try{ body=(await r.text()).slice(0,300); }catch(_){}
+      const e=new Error("HTTP "+r.status); e.http=r.status; e.body=body; throw e; }
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+/* Rotas de consulta ao GoaT, em ordem:
+   1) servidor local dos lançadores Windows/Mac (sem restrição do navegador);
+   2) acesso direto;
+   3) iframe isolado (origem "null"), para a versão hospedada/instalada no Android. */
+const LOCAL = location.protocol==="http:" && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+let goatFrame=null, goatFrameSeq=0; const goatFramePend={};
+function frameFetch(url){
+  return new Promise((resolve,reject)=>{
+    try{
+      if(!goatFrame){
+        goatFrame=document.createElement("iframe");
+        goatFrame.setAttribute("sandbox","allow-scripts");
+        goatFrame.setAttribute("aria-hidden","true"); goatFrame.tabIndex=-1;
+        goatFrame.style.cssText="position:absolute;width:0;height:0;border:0;visibility:hidden";
+        goatFrame.srcdoc='<script>addEventListener("message",async function(e){var d=e.data||{};try{var r=await fetch(d.url,{headers:{Accept:"application/json"}});var t=await r.text();parent.postMessage({id:d.id,ok:r.ok,status:r.status,body:t},"*")}catch(err){parent.postMessage({id:d.id,ok:false,status:0,body:String(err)},"*")}});<\/script>';
+        window.addEventListener("message",e=>{ if(!goatFrame||e.source!==goatFrame.contentWindow) return; const d=e.data||{}; const f=goatFramePend[d.id]; if(f){ delete goatFramePend[d.id]; f(d); } });
+        goatFrame._ready=new Promise(res=>goatFrame.addEventListener("load",res,{once:true}));
+        document.body.appendChild(goatFrame);
+      }
+      const id=++goatFrameSeq;
+      const t=setTimeout(()=>{ delete goatFramePend[id]; const e=new Error("tempo esgotado"); e.name="AbortError"; reject(e); },20000);
+      goatFramePend[id]=d=>{ clearTimeout(t);
+        if(d.ok){ try{ resolve(JSON.parse(d.body)); }catch(x){ reject(x); } }
+        else { const e=new Error(d.status?"HTTP "+d.status:"sem resposta"); if(d.status){ e.http=d.status; e.body=String(d.body||"").slice(0,300); } reject(e); } };
+      goatFrame._ready.then(()=>goatFrame.contentWindow.postMessage({id,url},"*"));
+    }catch(e){ reject(e); }
+  });
+}
+async function goatAPI(pathQuery){
+  const direto = GOAT+"/api/v2/"+pathQuery;
+  const rotas = [];
+  if(LOCAL) rotas.push(()=>fetchJSON("/goat/"+pathQuery));
+  rotas.push(()=>fetchJSON(direto));
+  if(location.protocol==="https:" || location.protocol==="http:") rotas.push(()=>frameFetch(direto));
+  let last;
+  for(const r of rotas){ try{ return await r(); }catch(e){ if(!last || !last.http) last=e; } }
+  throw last;
+}
+const NA_CLAUDE = /(^|\.)claude\.ai$|claudeusercontent|claude\.site/.test(location.hostname);
+function goatErro(e, nome){
+  const link = '<a href="'+goatLink(nome)+'" target="_blank" rel="noopener">busca de <i>'+esc(nome)+'</i> no GoaT</a>';
+  let motivo;
+  if(NA_CLAUDE)
+    motivo = "A versão do link do claude.ai não pode consultar outros sites. Para a busca automática, use o app instalado (Windows, Mac ou Android).";
+  else if(e && e.http)
+    motivo = "O GoaT recusou a consulta ("+esc(e.message)+"). Me envie o detalhe técnico abaixo para eu ajustar a busca."+
+      (e.body?'<br><span class="hint" style="font-family:var(--font-num)">Detalhe técnico: '+esc(e.body)+'</span>':'');
+  else if(location.protocol==="file:")
+    motivo = "O navegador bloqueou a consulta porque o app foi aberto direto pelo arquivo .html. Abra pelo lançador: “Windows - Abrir GenCalcLGBio.bat” ou “Mac - Abrir GenCalcLGBio.command”.";
+  else if(e && e.name==="AbortError")
+    motivo = "O GoaT demorou demais para responder. Verifique a internet e tente de novo.";
+  else
+    motivo = "Sem resposta do GoaT. Verifique a conexão com a internet (ou o proxy da rede) e tente de novo.";
+  return '<div class="alert warn">'+motivo+'<br>Enquanto isso, abra a '+link+' e digite o tamanho do genoma abaixo.</div>';
+}
+const RANK={species:'espécie',genus:'gênero',family:'família',order:'ordem',class:'classe',phylum:'filo',kingdom:'reino',subspecies:'subespécie',tribe:'tribo',subfamily:'subfamília'};
+const rk = r => RANK[r]||r||'';
+const srcLabel = s => { s = Array.isArray(s)?s[0]:s;
+  if(s==="direct") return '<span class="pill good">Medido para a espécie</span>';
+  if(s==="ancestor") return '<span class="pill warn">Estimado a partir de táxon aparentado</span>';
+  if(s==="descendant") return '<span class="pill info">Estimado de subespécies/variedades</span>';
+  return s ? '<span class="pill mute">'+esc(s)+'</span>' : ''; };
+async function goatBuscar(nome){
+  nome = (nome||"").trim().replace(/\s+/g," ");
+  if(!nome){ toast("Digite o nome da espécie"); return; }
+  const box = $("goat-box");
+  box.innerHTML = '<span class="spin"></span> <span class="hint">Consultando o GoaT para <i>'+esc(nome)+'</i>…</span>';
+  try{
+    const enc = x => encodeURIComponent(x).replace(/\(/g,"%28").replace(/\)/g,"%29");
+    const t = "tax_name("+nome+")";
+    const variantes = [
+      "search?query="+encodeURIComponent(t)+"&result=taxon&taxonomy=ncbi&includeEstimates=true&fields=genome_size&size=10",
+      "search?query="+enc(t)+"&result=taxon&taxonomy=ncbi&includeEstimates=true&fields=genome_size",
+      "search?query="+enc(t)+"&result=taxon&includeEstimates=true&fields=genome_size",
+      "search?query="+enc(t)+"&result=taxon&includeEstimates=true",
+      "search?query="+enc(t)+"&result=taxon"
+    ];
+    let hit=null, gs=null, erro=null;
+    for(const v of variantes){
+      try{
+        const js = await goatAPI(v);
+        const res = (js.results||[]).map(h=>h.result||{});
+        const h = res.find(r=>(r.scientific_name||"").toLowerCase()===nome.toLowerCase()) || res[0];
+        erro=null;
+        if(h){ hit=h; gs=(h.fields||{}).genome_size; if(gs && gs.value) break; }
+        else break; // consulta aceita, mas sem resultado
+      }catch(e){ erro=e; }
+    }
+    // caminho alternativo: lookup -> record
+    if(!(gs && gs.value)){
+      try{
+        const lk = await goatAPI("lookup?searchTerm="+enc(nome)+"&result=taxon&taxonomy=ncbi&size=5");
+        const lr = (lk.results||[]);
+        const pick = lr.find(x=>((x.result||{}).scientific_name||"").toLowerCase()===nome.toLowerCase()) || null;
+        const id = pick && ((pick.result||{}).taxon_id || pick.id);
+        if(id){
+          const rc = await goatAPI("record?recordId="+enc(String(id))+"&result=taxon&taxonomy=ncbi");
+          const rec = ((rc.records||[])[0]||{}).record || {};
+          const g = (rec.attributes||rec.fields||{}).genome_size;
+          if(g && g.value){ hit={scientific_name:rec.scientific_name||pick.result.scientific_name, taxon_rank:rec.taxon_rank, taxon_id:rec.taxon_id||id}; gs=g; erro=null; }
+        }
+      }catch(e){ if(!erro) erro=e; }
+    }
+    if(erro && !(gs && gs.value)) throw erro;
+    if(hit && gs && gs.value){
+      const gb = gs.value/1e9;
+      S.goat = {nome:hit.scientific_name, gb, src:gs.aggregation_source, rank:hit.taxon_rank, id:hit.taxon_id};
+      $("esp-nome").value = hit.scientific_name;
+      $("esp-gen-u").value = "Gb"; $("esp-gen").value = +gb.toFixed(4);
+      $("esp-gen-src").textContent = "Valor do GoaT. Você pode editar.";
+      box.innerHTML = '<div class="goat-res"><span class="gs">'+nf(gb, gb<1?3:2)+' Gb</span><span class="hint">'+ni(gs.value/1e6)+' Mb</span>'+srcLabel(gs.aggregation_source)+'</div>'+
+        '<div class="hint" style="margin-top:6px"><i>'+esc(hit.scientific_name)+'</i> · '+esc(rk(hit.taxon_rank))+' · NCBI taxid '+esc(hit.taxon_id||"")+(gs.aggregation_rank?' · estimativa no nível de '+esc(rk(gs.aggregation_rank)):'')+' · <a href="'+goatLink(hit.scientific_name)+'" target="_blank" rel="noopener">ver no GoaT</a></div>';
+      return;
+    }
+    // sem resultado: sugestões
+    let sugs = [];
+    try{
+      const lk = await goatAPI("lookup?searchTerm="+encodeURIComponent(nome)+"&result=taxon&taxonomy=ncbi&size=8");
+      sugs = (lk.results||[]).map(h=>(h.result&&h.result.scientific_name)||"").filter(Boolean);
+      sugs = [...new Set(sugs)].slice(0,8);
+    }catch(e){}
+    box.innerHTML = '<div class="alert warn">Não encontrei tamanho de genoma para <i>'+esc(nome)+'</i> no GoaT.'+(sugs.length?' Talvez seja um destes:':' Confira a grafia ou digite o tamanho abaixo.')+'</div>'+
+      (sugs.length?'<div class="sugs">'+sugs.map(s=>'<button type="button" data-sug="'+esc(s)+'">'+esc(s)+'</button>').join("")+'</div>':'');
+  }catch(e){
+    box.innerHTML = goatErro(e, nome);
+  }
+}
+$("esp-buscar").addEventListener("click",()=>goatBuscar($("esp-nome").value));
+$("esp-nome").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); goatBuscar($("esp-nome").value); } });
+$("goat-box").addEventListener("click",e=>{ const b=e.target.closest("[data-sug]"); if(b){ $("esp-nome").value=b.dataset.sug; goatBuscar(b.dataset.sug); } });
+["esp-gen","esp-gen-u"].forEach(id=>$(id).addEventListener("input",()=>{ $("esp-gen-src").textContent = "Valor digitado."; }));
+
+function speciesLine(){
+  const G = genomaGb();
+  document.querySelectorAll(".species-line").forEach(p=>p.innerHTML = '<i>'+esc(especie())+'</i> · genoma de '+nf(G, G<1?3:2)+' Gb ('+ni(G*1000)+' Mb)');
+}
+
+/* ======================= WGS SHORT ======================= */
+let lastWS = null;
+function wsOpts(){
+  return {metric:"gb", G:genomaGb(), N:int("ws-n"), porLib:genomaGb()*Math.max(0,num("ws-cov",10)),
+    phix:pct("ws-phix",1), margem:pct("ws-margem",0), plat:radio("ws-plat"), minCyc:+radio("ws-len"),
+    index:$("ws-index").checked, prepItens:prepIllumina("ws",$("ws-kit").value,int("ws-n")), phixPrefix:"ws", mostrarCurtos:false};
+}
+function renderWSResult(){
+  const o = wsOpts(), cov = num("ws-cov",10), res = compararIllumina(o); lastWS = {o,res,cov};
+  const bruto = o.porLib*o.N/((1-o.phix)*(1-o.margem));
+  $("wsr-tiles").innerHTML =
+    '<div class="tile hero"><div class="k">Dados necessários</div><div class="v">'+nfa(o.porLib*o.N)+'<small>Gb</small></div><div class="s">'+o.N+' indivíduos × '+nf(cov,cov%1?1:0)+'×</div></div>'+
+    '<div class="tile"><div class="k">Por indivíduo</div><div class="v">'+nfa(o.porLib)+'<small>Gb</small></div><div class="s">'+covPill(cov)+'</div></div>'+
+    '<div class="tile"><div class="k">Rendimento bruto mínimo</div><div class="v">'+nfa(bruto)+'<small>Gb</small></div><div class="s">com PhiX'+(o.margem?' e margem':'')+'</div></div>'+
+    '<div class="tile"><div class="k">Reads (clusters) por indivíduo</div><div class="v">'+nfa(o.porLib*1e3/(+radio("ws-len")||300))+'<small>M</small></div><div class="s">com reads de '+({100:"2×50",200:"2×100",300:"2×150"}[radio("ws-len")]||"2×150")+'</div></div>';
+  const extra = (o.N>384 && o.index) ? '<div class="alert warn">Mais de 384 amostras: o conjunto de index tem 384 combinações, então são necessárias pelo menos '+Math.ceil(o.N/384)+' corridas.</div>' : '';
+  recIllumina("wsr-rec", res, o, extra + (o.margem===0?'<div class="alert info">Cobertura teórica, sem margem de perdas. Ajuste em Parâmetros avançados.</div>':''));
+  tabelaIllumina("wsr-list", res, o);
+  renderSim();
+}
+function fillSim(keep){
+  const plat = radio("sim-plat"), list = CART.filter(c=>c.plat===plat), sel=$("sim-cart");
+  sel.innerHTML = list.map(c=>'<option value="'+c.id+'">'+esc(c.fc+" · "+c.cyc+" ciclos — "+gbTxt(c.gb)+" · "+readsTxt(c.reads)+" reads")+'</option>').join("");
+  sel.value = (keep && list.some(c=>c.id===keep)) ? keep : (plat==="NextSeq"?"20100992":"20141597");
+}
+function renderSim(){
+  const c = CART.find(x=>x.id===$("sim-cart").value); if(!c) return;
+  const G = genomaGb(), N = int("sim-n"), phix=pct("ws-phix",1), m=pct("ws-margem",0);
+  const ef = c.gb*(1-phix)*(1-m), por = ef/N, cov = G>0?por/G:NaN;
+  const ph = phixItem("ws",1); const pc = somar(prepIllumina("ws",$("ws-kit").value,N).concat(ph?[ph]:[]));
+  const tot = (c.preco||0)+pc.total;
+  $("sim-out").innerHTML = '<div class="tiles" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+
+    '<div class="tile hero"><div class="k">Cobertura por indivíduo</div><div class="v">'+nfa(cov)+'<small>×</small></div><div class="s">'+covPill(cov)+'</div></div>'+
+    '<div class="tile"><div class="k">Por indivíduo</div><div class="v">'+nfa(por)+'<small>Gb</small></div><div class="s">'+nf(c.reads*(1-phix)*(1-m)/N,2)+' M clusters · '+leitura(c)+'</div></div></div>'+
+    '<div class="cost" style="margin-top:12px"><span class="l">Cartucho ('+c.id+')</span><span class="r">'+brl(c.preco)+'</span>'+costHTML({itens:pc.itens,total:tot,pend:pc.pend}).replace('Total','Total com preparo')+'<span class="l">Por amostra</span><span class="r">'+brl(tot/N)+'</span></div>'+
+    '<div class="btns" style="margin-top:12px"><button class="btn ghost sm" id="sim-save">Salvar cenário</button></div>';
+  $("sim-save").onclick = ()=>addCen({met:"Genoma total · short",esp:especie(),des:N+" indiv. · "+nf(G,3)+" Gb",kit:cartShort(c)+" ("+leitura(c)+")",res:nfa(cov)+"× por indivíduo",tot,pa:tot/N});
+}
+document.querySelectorAll('input[name="sim-plat"]').forEach(r=>r.addEventListener("change",()=>{ fillSim(); renderSim(); }));
+["sim-cart","sim-n"].forEach(id=>$(id).addEventListener("input",renderSim));
+$("wsr-list").addEventListener("click",e=>{ const b=e.target.closest("[data-save]"); if(!b||!lastWS) return; const r=lastWS.res.rows[+b.dataset.save];
+  addCen({met:"Genoma total · short",esp:especie(),des:lastWS.o.N+" indiv. × "+nf(lastWS.cov,lastWS.cov%1?1:0)+"×",kit:cartShort(r.c)+" ("+leitura(r.c)+") × "+r.corridas,res:nfa(r.obtido/lastWS.o.G)+"× obtidos",tot:r.tot,pa:r.porAmostra}); });
+
+/* ======================= WGS LONG (Nanopore) ======================= */
+function fillOntKits(){
+  const sel=$("wl-kit"), cur=sel.value;
+  sel.innerHTML = ONT.filter(k=>k.mux).map(k=>'<option value="'+k.key+'">'+esc(k.nome+" ("+k.cod+")")+'</option>').join("") + '<option value="none">Não incluir preparo</option>';
+  if(cur) sel.value = cur;
+}
+let lastWL=null;
+function calcLong(red){
+  const G=genomaGb(), cov=Math.max(0,num("wl-cov",30)), N=int("wl-n");
+  const nom=Math.max(1,num("wl-nom",280)); if(red==null) red=Math.min(95,Math.max(0,num("wl-red",60)));
+  const ef = nom*(1-red/100);
+  const kitK=$("wl-kit").value, kit=ont(kitK);
+  const mux = $("wl-mux").checked && kit && kit.mux>1;
+  const need = G*cov;
+  let fc, fcPorInd=null, indPorFc=null;
+  if(mux){ indPorFc = Math.min(Math.floor(ef/need+1e-9), kit.mux);
+    if(indPorFc>=1) fc = Math.ceil(N/indPorFc); else { fcPorInd=Math.ceil(need/ef-1e-9); fc = N*fcPorInd; } }
+  else { fcPorInd = Math.max(1,Math.ceil(need/ef-1e-9)); fc = N*fcPorInd; }
+  const covObt = ef*fc/N/G;
+  const libs = fc*Math.max(1,int("wl-libs")), lav = fc*Math.max(0,Math.round(num("wl-wash",4)));
+  const inteiro = $("wl-modo").value==="inteiro";
+  const it=[];
+  const add=(p,qtdUso,label)=>{ if(!p||qtdUso<=0) return; const q = inteiro?Math.ceil(qtdUso/p.cap):qtdUso/p.cap;
+    it.push(item(p.nome, label+(inteiro?" → "+q+" "+(p.key==="fc"?"caixa"+(q>1?"s":""):"kit"+(q>1?"s":"")):""), p.preco, q)); };
+  add(ont("fc"), fc, fc+" flowcell"+(fc>1?"s":""));
+  if(kit) add(kit, libs, libs+" bibliotecas");
+  if($("wl-neb").checked && kit) add(ont("neb"), libs, libs+" bibliotecas");
+  add(ont("wash"), lav, lav+" lavagens");
+  const c = somar(it);
+  return {G,cov,N,need,ef,red,fc,fcPorInd,indPorFc,covObt,mux,kit,c,libs,lav,rodadas:Math.ceil(fc/2)};
+}
+function renderWLConfig(){ const nom=num("wl-nom",280), red=num("wl-red",60); $("wl-ef").innerHTML = nfa(nom*(1-red/100))+'<small>Gb</small>'; }
+function renderWLResult(){
+  const r=calcLong(); lastWL=r;
+  const horas=num("wl-horas",72);
+  $("wlr-tiles").innerHTML =
+    '<div class="tile hero"><div class="k">Flowcells necessárias</div><div class="v">'+r.fc+'</div><div class="s">PromethION R10.4.1 · '+nfa(r.ef)+' Gb efetivos cada</div></div>'+
+    '<div class="tile"><div class="k">Dados por indivíduo</div><div class="v">'+nfa(r.need)+'<small>Gb</small></div><div class="s">'+nf(r.cov,r.cov%1?1:0)+'× · '+r.N+' indivíduo'+(r.N>1?'s':'')+'</div></div>'+
+    '<div class="tile"><div class="k">Cobertura obtida</div><div class="v">'+nfa(r.covObt)+'<small>×</small></div><div class="s">'+(r.mux&&r.indPorFc>=1? r.indPorFc+' indiv. por flowcell':(r.fcPorInd||1)+' flowcell'+((r.fcPorInd||1)>1?'s':'')+' por indivíduo')+'</div></div>'+
+    '<div class="tile"><div class="k">Tempo no P2 Solo</div><div class="v">'+r.rodadas+'<small>rodada'+(r.rodadas>1?'s':'')+'</small></div><div class="s">2 posições · ≈ '+nf(r.rodadas*horas/24,0)+' dias de corrida</div></div>';
+  $("wlr-cost").innerHTML = costHTML(r.c) + '<span class="l">Por indivíduo</span><span class="r">'+brl(r.c.total/r.N)+'</span>';
+  const al=[pendAlert(r.c.pend)];
+  if($("wl-mux").checked && !(r.kit&&r.kit.mux>1)) al.push('<div class="alert warn">O kit escolhido não tem barcode; cada indivíduo vai para sua própria flowcell. Escolha o Native Barcode 24 para multiplexar.</div>');
+  if(r.mux && r.indPorFc<1) al.push('<div class="alert info">Cada indivíduo precisa de mais de uma flowcell, então multiplexar não reduz o número de flowcells.</div>');
+  if(!r.mux && r.covObt > r.cov*2.5 && r.N>1 && r.kit && r.kit.mux===1) al.push('<div class="alert info">Cada flowcell rende bem mais que o necessário por indivíduo ('+nfa(r.covObt)+'×). Com barcode (Native Barcode 24) daria para colocar até '+Math.min(24,Math.floor(r.ef/r.need))+' indivíduos por flowcell.</div>');
+  $("wlr-alerts").innerHTML = al.join("");
+  $("wlr-sens").innerHTML = [40,50,60,70,r.red].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b).map(v=>{ const x=calcLong(v);
+    return '<tr'+(v===r.red?' class="best"':'')+'><td class="n">'+nf(v,0)+'%</td><td class="n">'+nfa(x.ef)+'</td><td class="n">'+x.fc+'</td><td class="n">'+nfa(x.covObt)+'×</td><td class="n">'+brl(x.c.total)+'</td></tr>'; }).join("");
+}
+$("wlr-save").addEventListener("click",()=>{ const r=lastWL; if(!r) return;
+  addCen({met:"Genoma total · long",esp:especie(),des:r.N+" indiv. × "+nf(r.cov,0)+"×",kit:"PromethION P2 Solo · "+r.fc+" flowcell(s)"+(r.kit?" · "+r.kit.cod:""),res:nfa(r.covObt)+"× obtidos",tot:r.c.total,pa:r.c.total/r.N}); });
+
+/* ======================= RNASEQ ======================= */
+let lastRN=null;
+function rnSamples(){ return int("rn-tec")*int("rn-rep")*int("rn-cond"); }
+function renderRNConfig(){
+  const n=rnSamples(); $("rn-total").textContent = n;
+  $("rn-total-s").textContent = int("rn-tec")+" tecido(s) × "+int("rn-rep")+" réplica(s) × "+int("rn-cond")+" condição(ões)";
+  const r=num("rn-reads",30);
+  $("rn-reads-hint").textContent = r<15 ? "10–15 M: expressão diferencial de genes bem expressos, com genoma de referência." :
+    r<40 ? "20–30 M: padrão para expressão diferencial com genoma de referência." :
+    r<80 ? "40–60 M: genes pouco expressos, isoformas e splicing alternativo." : "80–100 M ou mais: montagem de novo do transcriptoma, sem genoma de referência.";
+}
+function renderRNResult(){
+  const N=rnSamples(), reads=Math.max(0,num("rn-reads",30));
+  const o={metric:"reads", N, porLib:reads, phix:pct("rn-phix",1), margem:pct("rn-margem",0), plat:radio("rn-plat"), minCyc:+radio("rn-len"),
+    index:$("rn-index").checked, prepItens:prepIllumina("rn",$("rn-kit").value,N), phixPrefix:"rn", mostrarCurtos:false};
+  const res=compararIllumina(o); lastRN={o,res,reads};
+  $("rnr-tiles").innerHTML =
+    '<div class="tile hero"><div class="k">Reads necessários</div><div class="v">'+nfa(reads*N)+'<small>M</small></div><div class="s">'+N+' amostras × '+nf(reads,reads%1?1:0)+' M</div></div>'+
+    '<div class="tile"><div class="k">Amostras</div><div class="v">'+N+'</div><div class="s">'+int("rn-tec")+' tecido(s) × '+int("rn-rep")+' réplica(s)'+(int("rn-cond")>1?' × '+int("rn-cond")+' cond.':'')+'</div></div>'+
+    '<div class="tile"><div class="k">Reads brutos mínimos</div><div class="v">'+nfa(reads*N/((1-o.phix)*(1-o.margem)))+'<small>M</small></div><div class="s">com PhiX'+(o.margem?' e margem':'')+'</div></div>'+
+    '<div class="tile"><div class="k">Genoma de referência</div><div class="v">'+nf(genomaGb(),genomaGb()<1?3:2)+'<small>Gb</small></div><div class="s"><i>'+esc(especie())+'</i></div></div>';
+  const kit = $("rn-kit").value;
+  recIllumina("rnr-rec", res, o, kit!=="none" && prep(kit).preco==null ? '' : '');
+  tabelaIllumina("rnr-list", res, o);
+}
+$("rnr-list").addEventListener("click",e=>{ const b=e.target.closest("[data-save]"); if(!b||!lastRN) return; const r=lastRN.res.rows[+b.dataset.save];
+  addCen({met:"RNAseq",esp:especie(),des:lastRN.o.N+" amostras × "+nf(lastRN.reads,0)+" M reads",kit:cartShort(r.c)+" ("+leitura(r.c)+") × "+r.corridas,res:nf(r.obtido,1)+" M reads/amostra",tot:r.tot,pa:r.porAmostra}); });
+
+/* ======================= METABARCODING ======================= */
+let lastMT=null;
+$("meta-tipos").innerHTML = TIPOS_EDNA.map(t=>'<button class="choice small" data-edna="'+t.k+'" aria-pressed="'+(t.k===S.tipoEdna)+'"><h4>'+t.n+'</h4><p>'+t.d+'</p></button>').join("");
+$("meta-tipos").addEventListener("click",e=>{ const b=e.target.closest("[data-edna]"); if(!b) return; S.tipoEdna=b.dataset.edna;
+  document.querySelectorAll("[data-edna]").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+$("mt-marc").innerHTML = MARCADORES.map(m=>'<option value="'+m.k+'">'+esc(m.n)+'</option>').join("");
+$("mt-marc").addEventListener("change",()=>{ const m=MARCADORES.find(x=>x.k===$("mt-marc").value); $("mt-amp").value=m.amp; ampHint(); });
+function minCycMeta(){ return num("mt-amp",170) + num("mt-overlap",20); }
+function ampHint(){
+  const need = minCycMeta(); const opts=[100,200,300,600,1000].filter(c=>c>=need);
+  $("mt-amp-hint").textContent = "Para sobrepor R1 e R2 são necessários ao menos "+ni(need)+" ciclos: kits de "+(opts.length?opts.map(c=>c===1000?"2×500":"2×"+c/2).join(", "):"nenhum tamanho disponível")+".";
+}
+$("mt-amp").addEventListener("input",ampHint);
+function mtLibs(){
+  const n=int("mt-n"), rep=int("mt-rep"), pool=radio("mt-pool")==="sim", mk=int("mt-nmarc"), ctrl=Math.max(0,Math.round(num("mt-ctrl",0)));
+  const porAmostra = pool?1:rep;
+  return {n,rep,pool,mk,ctrl, amostrasLib:n*porAmostra*mk, ctrlLib:ctrl*mk, total:(n*porAmostra+ctrl)*mk};
+}
+function tipoNome(){ return (TIPOS_EDNA.find(t=>t.k===S.tipoEdna)||{}).n; }
+function marcNome(){ return (MARCADORES.find(m=>m.k===$("mt-marc").value)||{}).n; }
+function renderMTConfig(){
+  const L=mtLibs();
+  $("mt-libs").textContent = ni(L.total);
+  $("mt-libs-s").textContent = "("+L.n+" amostras × "+(L.pool?"1 pool":L.rep+" réplicas")+" + "+L.ctrl+" controles) × "+L.mk+" marcador(es)";
+  $("meta-line").textContent = tipoNome()+" · "+marcNome()+" · amplicon de "+ni(num("mt-amp",170))+" pb";
+}
+function renderMTResult(){
+  const L=mtLibs(), reads=Math.max(1,num("mt-reads",100000));
+  const it=[]; const lp=prep("meta_lib"); it.push(item(lp.uso, L.total+" bibliotecas", lp.preco, L.total));
+  if($("mt-index").checked){ const p=prep("index"); const q=Math.ceil(L.total/384); it.push(item(p.uso,L.total+" bibliotecas → "+q+" conj.",p.preco,q)); }
+  if($("mt-beads").checked){ const p=prep("beads"); const q=Math.ceil(L.total*2/p.cap); it.push(item(p.uso,L.total+" bibliotecas × 2 purificações → "+q+" frasco"+(q>1?"s":""),p.preco,q)); }
+  const o={metric:"reads", unidade:"un", N:L.total, Nbase:L.n, porLib:reads/1e6, phix:pct("mt-phix",15), margem:pct("mt-margem",10), plat:radio("mt-plat"),
+    minCyc:minCycMeta(), index:$("mt-index").checked, prepItens:it, phixPrefix:"mt", mostrarCurtos:$("mt-short").checked};
+  const res=compararIllumina(o); lastMT={o,res,reads,L};
+  $("meta-line2").textContent = tipoNome()+" · "+marcNome()+" · amplicon de "+ni(num("mt-amp",170))+" pb · mínimo de "+ni(minCycMeta())+" ciclos";
+  $("mtr-tiles").innerHTML =
+    '<div class="tile hero"><div class="k">Reads necessários</div><div class="v">'+nfa(reads*L.total/1e6)+'<small>M</small></div><div class="s">'+ni(L.total)+' bibliotecas × '+readsFmt(reads)+'</div></div>'+
+    '<div class="tile"><div class="k">Bibliotecas</div><div class="v">'+ni(L.total)+'</div><div class="s">'+ni(L.amostrasLib)+' de amostras + '+ni(L.ctrlLib)+' de controles</div></div>'+
+    '<div class="tile"><div class="k">Reads brutos mínimos</div><div class="v">'+nfa(reads*L.total/1e6/((1-o.phix)*(1-o.margem)))+'<small>M</small></div><div class="s">com '+nf(o.phix*100,0)+'% PhiX e '+nf(o.margem*100,0)+'% de margem</div></div>'+
+    '<div class="tile"><div class="k">Amostras de campo</div><div class="v">'+L.n+'</div><div class="s">'+esc(tipoNome())+' · custo por amostra considera estas</div></div>';
+  recIllumina("mtr-rec", res, o, L.total>384 && o.index ? '<div class="alert warn">Mais de 384 bibliotecas: são necessárias pelo menos '+Math.ceil(L.total/384)+' corridas ou mais conjuntos de index.</div>':'');
+  tabelaIllumina("mtr-list", res, o);
+}
+$("mtr-list").addEventListener("click",e=>{ const b=e.target.closest("[data-save]"); if(!b||!lastMT) return; const r=lastMT.res.rows[+b.dataset.save];
+  addCen({met:"Metabarcoding",esp:tipoNome()+" · "+marcNome(),des:lastMT.L.n+" amostras · "+lastMT.L.total+" bibliotecas × "+readsFmt(lastMT.reads),kit:cartShort(r.c)+" ("+leitura(r.c)+") × "+r.corridas,res:readsFmt(r.obtido*1e6)+" reads/biblioteca",tot:r.tot,pa:r.porAmostra}); });
+
+/* ======================= CENÁRIOS ======================= */
+function addCen(c){ cenarios.push(c); store.cenarios=cenarios; save(); updCount(); toast("Cenário salvo em “Cenários salvos”"); }
+function updCount(){ $("cen-count").textContent = cenarios.length; }
+function renderCen(){
+  $("cen-list").innerHTML = cenarios.length ? cenarios.map((c,i)=>'<tr><td>'+esc(c.met)+'</td><td><i>'+esc(c.esp)+'</i></td><td>'+esc(c.des)+'</td><td>'+esc(c.kit)+'</td><td>'+esc(c.res)+'</td><td class="n">'+brl(c.tot)+'</td><td class="n">'+brl(c.pa)+'</td><td><button class="btn ghost sm" data-del="'+i+'">Remover</button></td></tr>').join("")
+    : '<tr><td colspan="8" class="empty">Nenhum cenário salvo. Nas telas de resultado, clique em “Salvar” na linha do cartucho que quer guardar.</td></tr>';
+}
+$("cen-list").addEventListener("click",e=>{ const b=e.target.closest("[data-del]"); if(!b) return; cenarios.splice(+b.dataset.del,1); store.cenarios=cenarios; save(); updCount(); renderCen(); });
+$("cen-clear").addEventListener("click",()=>{ cenarios=[]; store.cenarios=cenarios; save(); updCount(); renderCen(); });
+function cenTable(sep){
+  const head=["Metodologia","Espécie/amostra","Desenho","Equipamento e kit","Resultado","Custo total (R$)","Custo por amostra (R$)"];
+  const rows=cenarios.map(c=>[c.met,c.esp,c.des,c.kit,c.res,nf(c.tot,2),nf(c.pa,2)]);
+  return [head].concat(rows).map(r=>r.map(v=>sep===";"?'"'+String(v).replace(/"/g,'""')+'"':String(v)).join(sep)).join("\r\n");
+}
+$("cen-copy").addEventListener("click",async()=>{ if(!cenarios.length){toast("Nenhum cenário salvo");return;}
+  try{ await navigator.clipboard.writeText(cenTable("\t")); toast("Copiado. Cole no Excel com Ctrl+V"); }catch(e){ toast("Não foi possível copiar neste navegador"); } });
+$("cen-csv").addEventListener("click",()=>{ if(!cenarios.length){toast("Nenhum cenário salvo");return;}
+  try{ const blob=new Blob(["﻿"+cenTable(";")],{type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="GenCalcLGBio_cenarios.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    toast("Arquivo CSV gerado"); }catch(e){ toast("Exportação bloqueada aqui. Use “Copiar para Excel”"); } });
+
+/* ======================= PREÇOS ======================= */
+const prov = x => x.prov ? '<span class="prov">PROVISÓRIO</span>' : '';
+const pv = v => v==null ? "" : v;
+function renderPrecos(){
+  $("pr-cart").innerHTML = CART.map(c=>'<tr><td>'+platName(c.plat)+'</td><td class="num">'+c.id+'</td><td>'+esc(c.nome)+'</td><td>'+leitura(c)+'</td><td class="n">'+readsTxt(c.reads)+'</td><td class="n">'+gbTxt(c.gb)+'</td>'+
+    '<td class="n"><input type="number" min="0" step="1" data-k="c:'+c.id+'" value="'+pv(c.preco)+'" aria-label="Preço '+esc(c.nome)+'"></td><td class="n">'+(c.preco!=null?brl(c.preco/c.gb):"–")+'</td></tr>').join("");
+  const rowP = (p,pre) => '<tr><td class="num">'+esc(p.cod||"—")+'</td><td>'+esc(p.nome)+prov(p)+'</td><td>'+esc(p.uso)+'</td>'+
+    '<td class="n"><input type="number" min="1" step="1" style="width:76px" data-k="'+pre+'c:'+p.key+'" value="'+p.cap+'" aria-label="Rendimento do kit"> <span class="hint">'+esc(p.un)+'</span></td>'+
+    '<td class="n"><input type="number" min="0" step="0.01" data-k="'+pre+':'+p.key+'" value="'+pv(p.preco)+'" placeholder="a preencher" aria-label="Preço '+esc(p.nome)+'"></td><td class="n">'+(p.preco!=null?brl(p.preco/p.cap):"–")+'</td></tr>';
+  $("pr-prep").innerHTML = PREP.map(p=>rowP(p,"p")).join("");
+  $("pr-ont").innerHTML = ONT.map(p=>rowP(p,"o")).join("");
+}
+$("s-precos").addEventListener("change",e=>{
+  const k=e.target.dataset.k; if(!k) return;
+  const raw=e.target.value.trim(); const v = raw==="" ? null : parseFloat(raw.replace(",","."));
+  if(v!=null && (!isFinite(v)||v<0)) return;
+  store.precos = store.precos||{}; store.precos[k] = (k.startsWith("pc:")||k.startsWith("oc:")) ? Math.max(1,v||1) : v; save();
+  CART=clone(CART_DEFAULT); PREP=clone(PREP_DEFAULT); ONT=clone(ONT_DEFAULT); applyStoredPrices(); fillOntKits(); renderPrecos();
+});
+$("pr-reset").addEventListener("click",()=>{ delete store.precos; save(); CART=clone(CART_DEFAULT); PREP=clone(PREP_DEFAULT); ONT=clone(ONT_DEFAULT); fillOntKits(); renderPrecos(); toast("Valores originais restaurados"); });
+
+/* ======================= ATUALIZAÇÃO ======================= */
+function refresh(id){
+  speciesLine();
+  if(id==="wgs-short-result") renderWSResult();
+  if(id==="wgs-long-config") renderWLConfig();
+  if(id==="wgs-long-result") renderWLResult();
+  if(id==="rna-config") renderRNConfig();
+  if(id==="rna-result") renderRNResult();
+  if(id==="meta-amostras") ampHint();
+  if(id==="meta-config") renderMTConfig();
+  if(id==="meta-result") renderMTResult();
+  if(id==="cenarios") renderCen();
+  if(id==="precos") renderPrecos();
+}
+document.querySelector("main").addEventListener("input",e=>{
+  if(e.target.closest("#s-precos")) return;
+  const cur = (document.querySelector(".screen.active")||{}).id||""; refresh(cur.replace(/^s-/,""));
+});
+document.querySelector("main").addEventListener("change",e=>{
+  if(e.target.closest("#s-precos")) return;
+  const cur = (document.querySelector(".screen.active")||{}).id||""; refresh(cur.replace(/^s-/,""));
+});
+
+if("serviceWorker" in navigator && location.protocol==="https:" && !NA_CLAUDE){
+  try{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }catch(e){}
+}
+initChips(); fillOntKits(); fillSim(); updCount(); ampHint(); goatIdle(); renderSteps("home");
+})();
+</script>
+</body>
+</html>
